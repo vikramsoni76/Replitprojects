@@ -1,38 +1,78 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import { listings, leads, type Listing, type InsertListing, type Lead, type InsertLead, users } from "@shared/schema";
+import { eq, desc, and } from "drizzle-orm";
+import { authStorage } from "./replit_integrations/auth/storage";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Listings
+  getListings(status?: string, sellerId?: string): Promise<Listing[]>;
+  getListing(id: number): Promise<Listing | undefined>;
+  createListing(listing: InsertListing & { sellerId: string }): Promise<Listing>;
+  updateListing(id: number, updates: Partial<Listing>): Promise<Listing>;
+  deleteListing(id: number): Promise<void>;
+  
+  // Leads
+  createLead(lead: InsertLead): Promise<Lead>;
+  getLeads(listingId?: number): Promise<Lead[]>;
+  
+  // Helpers
+  getUser(id: string): Promise<typeof users.$inferSelect | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async getListings(status?: string, sellerId?: string): Promise<Listing[]> {
+    let query = db.select().from(listings);
+    const filters = [];
+    
+    if (status) {
+      filters.push(eq(listings.status, status as any));
+    }
+    if (sellerId) {
+      filters.push(eq(listings.sellerId, sellerId));
+    }
+    
+    if (filters.length > 0) {
+      // @ts-ignore
+      return await query.where(and(...filters)).orderBy(desc(listings.createdAt));
+    }
+    
+    return await query.orderBy(desc(listings.createdAt));
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getListing(id: number): Promise<Listing | undefined> {
+    const [listing] = await db.select().from(listings).where(eq(listings.id, id));
+    return listing;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createListing(insertListing: InsertListing & { sellerId: string }): Promise<Listing> {
+    const [listing] = await db.insert(listings).values(insertListing).returning();
+    return listing;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async updateListing(id: number, updates: Partial<Listing>): Promise<Listing> {
+    const [updated] = await db.update(listings).set(updates).where(eq(listings.id, id)).returning();
+    return updated;
+  }
+
+  async deleteListing(id: number): Promise<void> {
+    await db.delete(listings).where(eq(listings.id, id));
+  }
+
+  async createLead(insertLead: InsertLead): Promise<Lead> {
+    const [lead] = await db.insert(leads).values(insertLead).returning();
+    return lead;
+  }
+
+  async getLeads(listingId?: number): Promise<Lead[]> {
+    if (listingId) {
+      return await db.select().from(leads).where(eq(leads.listingId, listingId)).orderBy(desc(leads.createdAt));
+    }
+    return await db.select().from(leads).orderBy(desc(leads.createdAt));
+  }
+
+  async getUser(id: string) {
+    return authStorage.getUser(id);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
