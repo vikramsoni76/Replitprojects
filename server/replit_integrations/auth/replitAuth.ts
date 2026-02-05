@@ -120,11 +120,25 @@ export async function setupAuth(app: Express) {
     };
 
     app.get("/api/login", (req, res, next) => {
-      ensureStrategy(req.hostname);
-      passport.authenticate(`replitauth:${req.hostname}`, {
-        prompt: "login consent",
-        scope: ["openid", "email", "profile", "offline_access"],
-      })(req, res, next);
+      // Return a simple login page since user requested username/password login
+      res.send(`
+        <html>
+          <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f5;">
+            <form action="/api/login" method="POST" style="background: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); width: 100%; max-width: 400px;">
+              <h1 style="margin-top: 0; font-size: 1.5rem; margin-bottom: 1.5rem;">Admin Login</h1>
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem;">Username</label>
+                <input type="text" name="username" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.25rem;">
+              </div>
+              <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem;">Password</label>
+                <input type="password" name="password" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.25rem;">
+              </div>
+              <button type="submit" style="width: 100%; padding: 0.75rem; background: #2563eb; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Login</button>
+            </form>
+          </body>
+        </html>
+      `);
     });
 
     app.get("/api/callback", (req, res, next) => {
@@ -151,10 +165,20 @@ export async function setupAuth(app: Express) {
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) return next(err);
-      if (!user) return res.status(401).json(info);
+      if (!user) return res.status(401).send(`
+        <html>
+          <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f5;">
+            <div style="background: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); width: 100%; max-width: 400px; text-align: center;">
+              <h1 style="color: #dc2626; font-size: 1.5rem; margin-bottom: 1rem;">Login Failed</h1>
+              <p style="margin-bottom: 1.5rem;">${info?.message || "Invalid credentials"}</p>
+              <a href="/api/login" style="display: inline-block; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 0.25rem;">Try Again</a>
+            </div>
+          </body>
+        </html>
+      `);
       req.logIn(user, (err) => {
         if (err) return next(err);
-        res.json(user);
+        res.redirect("/");
       });
     })(req, res, next);
   });
