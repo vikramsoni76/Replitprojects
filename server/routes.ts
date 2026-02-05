@@ -3,7 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, authStorage } from "./replit_integrations/auth";
 import { isAuthenticated } from "./replit_integrations/auth";
 import nodemailer from "nodemailer";
 
@@ -202,15 +202,11 @@ export async function registerRoutes(
     }
   });
 
-  app.get(api.leads.list.path, isAuthenticated, async (req, res) => {
+  app.get(api.leads.list.path, isAuthenticated, async (req: any, res) => {
     // @ts-ignore
-    const userEmail = req.user.claims.email;
-    const isAdmin = userEmail === ADMIN_EMAIL;
+    const isAdmin = req.user.isAdmin || req.user.claims?.email === ADMIN_EMAIL;
     
     if (!isAdmin) {
-      // Sellers can only see leads for their listings? 
-      // Current requirement only mentions Admin manages leads.
-      // But let's allow admin for now.
       return res.status(403).json({ message: "Forbidden: Admin only" });
     }
 
@@ -219,6 +215,18 @@ export async function registerRoutes(
   });
 
   // Seed Data
+  const existingAdmin = await authStorage.getUserByUsername("Admin");
+  if (!existingAdmin) {
+    await authStorage.upsertUser({
+      id: "admin-id",
+      username: "Admin",
+      password: "Antman@1976",
+      isAdmin: true,
+      firstName: "Admin",
+      lastName: "User"
+    });
+  }
+
   if ((await storage.getListings()).length === 0) {
     console.log("Seeding database...");
     const demoSellerId = "demo-seller"; // This won't map to a real user unless one logs in with this ID, but good for display
