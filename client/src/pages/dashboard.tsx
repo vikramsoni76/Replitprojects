@@ -1,6 +1,6 @@
 import { Navbar } from "@/components/navbar";
 import { useAuth } from "@/hooks/use-auth";
-import { useListings, useDeleteListing } from "@/hooks/use-listings";
+import { useListings, useDeleteListing, useUpdateListing } from "@/hooks/use-listings";
 import { useLeads } from "@/hooks/use-leads";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ListingForm } from "@/components/listing-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Edit, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Edit, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Redirect } from "wouter";
 
@@ -69,9 +69,9 @@ export default function Dashboard() {
 }
 
 function ListingsManager({ sellerId, isAdmin }: { sellerId?: string, isAdmin: boolean }) {
-  // If admin, show all listings (no sellerId filter). If seller, filter by ID.
   const { data: listings, isLoading } = useListings(sellerId ? { sellerId } : {});
   const deleteMutation = useDeleteListing();
+  const updateMutation = useUpdateListing();
   const [editingId, setEditingId] = useState<number | null>(null);
 
   if (isLoading) return <div>Loading listings...</div>;
@@ -110,10 +110,35 @@ function ListingsManager({ sellerId, isAdmin }: { sellerId?: string, isAdmin: bo
                 <TableCell className="text-muted-foreground text-sm">
                   {new Date(listing.createdAt || "").toLocaleDateString()}
                 </TableCell>
-                <TableCell className="text-right space-x-2">
+                <TableCell className="text-right space-x-1">
+                  {isAdmin && listing.status === "pending" && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        title="Approve"
+                        data-testid={`button-approve-${listing.id}`}
+                        onClick={() => updateMutation.mutate({ id: listing.id, status: "approved" })}
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        title="Reject"
+                        data-testid={`button-reject-${listing.id}`}
+                        onClick={() => updateMutation.mutate({ id: listing.id, status: "rejected" })}
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+
                   <Dialog open={editingId === listing.id} onOpenChange={(open) => !open && setEditingId(null)}>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={() => setEditingId(listing.id)}>
+                      <Button variant="ghost" size="icon" title="Edit" data-testid={`button-edit-${listing.id}`} onClick={() => setEditingId(listing.id)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
@@ -132,6 +157,8 @@ function ListingsManager({ sellerId, isAdmin }: { sellerId?: string, isAdmin: bo
                     variant="ghost" 
                     size="icon" 
                     className="text-destructive hover:text-destructive"
+                    title="Delete"
+                    data-testid={`button-delete-${listing.id}`}
                     onClick={() => {
                       if(confirm("Are you sure you want to delete this listing?")) {
                         deleteMutation.mutate(listing.id);
