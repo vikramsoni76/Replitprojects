@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, LogOut, LayoutDashboard, User, Package, Settings } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, User, Package, Settings, Plus } from "lucide-react";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -103,6 +103,14 @@ export function Navbar() {
                 <Button size="sm" className="bg-primary hover:bg-primary/90" data-testid="button-sell">Sell Your Machine</Button>
               </Link>
             </div>
+          )}
+
+          {isAuthenticated && (
+            <Link href="/sell">
+              <Button size="sm" className="bg-primary hover:bg-primary/90 ml-2" data-testid="button-sell-nav">
+                <Plus className="mr-1 h-4 w-4" /> Sell Machine
+              </Button>
+            </Link>
           )}
 
           {/* Mobile Menu Trigger - Simplified for now */}

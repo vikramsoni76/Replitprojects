@@ -46,7 +46,7 @@ export default function AuthPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({ title: "Welcome back!", description: "You have been logged in successfully." });
-      setLocation("/dashboard");
+      setLocation("/sell");
     },
     onError: (err: Error) => {
       toast({ title: "Login failed", description: err.message, variant: "destructive" });
@@ -70,7 +70,7 @@ export default function AuthPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({ title: "Account created!", description: "You can now post your machine listing." });
-      setLocation("/dashboard");
+      setLocation("/sell");
     },
     onError: (err: Error) => {
       toast({ title: "Registration failed", description: err.message, variant: "destructive" });
@@ -79,7 +79,7 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      setLocation("/dashboard");
+      setLocation("/sell");
     }
   }, [isAuthenticated, isLoading, setLocation]);
 

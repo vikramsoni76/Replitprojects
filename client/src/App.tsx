@@ -11,6 +11,7 @@ import Dashboard from "@/pages/dashboard";
 import Admin from "@/pages/admin";
 import ListingDetails from "@/pages/listing-details";
 import AuthPage from "@/pages/auth";
+import SellPage from "@/pages/sell";
 
 function Router() {
   return (
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/browse" component={Browse} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/sell" component={SellPage} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/admin" component={Admin} />
       <Route path="/listing/:id" component={ListingDetails} />
