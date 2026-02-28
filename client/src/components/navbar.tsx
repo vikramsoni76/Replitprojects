@@ -15,7 +15,7 @@ export function Navbar() {
   const [location] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
 
-  const isAdmin = user?.email === "vikramsoni76@gmail.com"; 
+  const isAdmin = user?.isAdmin === true || user?.email === "vikramsoni76@gmail.com";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -96,12 +96,12 @@ export function Navbar() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <a href="/api/login">
-                <Button variant="ghost" size="sm">Log in</Button>
-              </a>
-              <a href="/api/login">
-                <Button size="sm" className="bg-primary hover:bg-primary/90">Post Machine</Button>
-              </a>
+              <Link href="/auth">
+                <Button variant="ghost" size="sm" data-testid="button-login">Log in</Button>
+              </Link>
+              <Link href="/auth">
+                <Button size="sm" className="bg-primary hover:bg-primary/90" data-testid="button-sell">Sell Your Machine</Button>
+              </Link>
             </div>
           )}
 

@@ -5,16 +5,48 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, authStorage } from "./replit_integrations/auth";
 import { isAuthenticated } from "./replit_integrations/auth";
+import { hashPassword } from "./replit_integrations/auth/replitAuth";
 import nodemailer from "nodemailer";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
-// Simple email sender
+const uploadDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const fileStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage: fileStorage,
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp|mp4|mov|avi|webm/;
+    const ext = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mime = allowedTypes.test(file.mimetype.split("/")[1]);
+    if (ext || mime) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image and video files are allowed"));
+    }
+  },
+});
+
 async function sendEmail(to: string, subject: string, text: string) {
-  // Try to configure transporter if env vars exist
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT) || 587,
-      secure: false, // true for 465, false for other ports
+      secure: false,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -40,15 +72,42 @@ async function sendEmail(to: string, subject: string, text: string) {
 
 const ADMIN_EMAIL = "vikramsoni76@gmail.com";
 
+function getUserId(req: any): string {
+  return req.user?.claims?.sub || req.user?.id || "";
+}
+
+function getUserEmail(req: any): string {
+  return req.user?.claims?.email || "";
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Auth setup
   await setupAuth(app);
   registerAuthRoutes(app);
 
-  // Listings
+  app.use("/uploads", (req, res, next) => {
+    const filePath = path.resolve(uploadDir, req.path.replace(/^\//, ""));
+    if (!filePath.startsWith(path.resolve(uploadDir))) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ message: "File not found" });
+    }
+  });
+
+  app.post("/api/upload", isAuthenticated, upload.array("files", 10), (req, res) => {
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
+    const urls = files.map((f) => `/uploads/${f.filename}`);
+    res.json({ urls });
+  });
+
   app.get(api.listings.list.path, async (req, res) => {
     const status = req.query.status as string | undefined;
     const sellerId = req.query.sellerId as string | undefined;
@@ -67,19 +126,24 @@ export async function registerRoutes(
   app.post(api.listings.create.path, isAuthenticated, async (req, res) => {
     try {
       const input = api.listings.create.input.parse(req.body);
-      // @ts-ignore
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       
       const listing = await storage.createListing({
         ...input,
         sellerId: userId,
       });
       
-      // Notify admin about new listing?
+      const seller = await storage.getUser(userId);
+      const sellerName = seller ? `${seller.firstName || ""} ${seller.lastName || ""}`.trim() : "Unknown";
+      const sellerEmail = seller?.email || "N/A";
+      const sellerMobile = seller?.mobile || "N/A";
+
+      const photosList = listing.photos.map((p, i) => `  Photo ${i + 1}: ${p.startsWith("/") ? `(uploaded file) ${p}` : p}`).join("\n");
+
       await sendEmail(
         ADMIN_EMAIL,
         "New Listing Pending Approval",
-        `A new listing "${listing.title}" has been posted and is waiting for approval.`
+        `A new listing has been posted and is waiting for your approval.\n\nMachine Details:\n  Title: ${listing.title}\n  Description: ${listing.description}\n  Heads: ${listing.heads}\n  Needles: ${listing.needles}\n  Area: ${listing.area}\n  Year: ${listing.year}\n  Video: ${listing.video || "None"}\n\nPhotos:\n${photosList}\n\nSeller Details:\n  Name: ${sellerName}\n  Email: ${sellerEmail}\n  Mobile: ${sellerMobile}\n  Address: ${seller?.address || "N/A"}`
       );
 
       res.status(201).json(listing);
@@ -104,19 +168,17 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Listing not found" });
       }
 
-      // @ts-ignore
-      const userId = req.user.claims.sub;
-      // @ts-ignore
-      const userEmail = req.user.claims.email;
+      const userId = getUserId(req);
+      const userEmail = getUserEmail(req);
+      const user = await storage.getUser(userId);
       
-      const isAdmin = userEmail === ADMIN_EMAIL;
+      const isAdmin = userEmail === ADMIN_EMAIL || user?.isAdmin === true;
       const isOwner = existing.sellerId === userId;
 
       if (!isAdmin && !isOwner) {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      // Only admin can change status
       if (input.status && !isAdmin) {
          delete input.status;
       }
@@ -142,12 +204,11 @@ export async function registerRoutes(
       return res.status(404).json({ message: "Listing not found" });
     }
 
-    // @ts-ignore
-    const userId = req.user.claims.sub;
-    // @ts-ignore
-    const userEmail = req.user.claims.email;
+    const userId = getUserId(req);
+    const userEmail = getUserEmail(req);
+    const user = await storage.getUser(userId);
     
-    const isAdmin = userEmail === ADMIN_EMAIL;
+    const isAdmin = userEmail === ADMIN_EMAIL || user?.isAdmin === true;
     const isOwner = existing.sellerId === userId;
 
     if (!isAdmin && !isOwner) {
@@ -158,7 +219,6 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
-  // Leads
   app.post(api.leads.create.path, async (req, res) => {
     try {
       const input = api.leads.create.input.parse(req.body);
@@ -166,26 +226,9 @@ export async function registerRoutes(
       
       const listing = await storage.getListing(lead.listingId);
       if (listing) {
-        // Send email to Admin as requested: "sends email to vikramsoni76@gmail.com with buyer name/email/phone + full machine/seller details."
         const seller = await storage.getUser(listing.sellerId);
         
-        const emailBody = `
-          New Interest in Machine: ${listing.title}
-          
-          Buyer Details:
-          Name: ${lead.buyerName}
-          Email: ${lead.buyerEmail}
-          Phone: ${lead.buyerPhone}
-          
-          Machine Details:
-          Title: ${listing.title}
-          Specs: ${listing.heads} Heads, ${listing.needles} Needles, Area: ${listing.area}, Year: ${listing.year}
-          Price/Desc: ${listing.description}
-          
-          Seller ID: ${listing.sellerId}
-          ${seller ? `Seller Name: ${seller.firstName} ${seller.lastName}` : ''}
-          ${seller ? `Seller Email: ${seller.email}` : ''}
-        `;
+        const emailBody = `New Interest in Machine: ${listing.title}\n\nBuyer Details:\n  Name: ${lead.buyerName}\n  Email: ${lead.buyerEmail}\n  Phone: ${lead.buyerPhone}\n\nMachine Details:\n  Title: ${listing.title}\n  Specs: ${listing.heads} Heads, ${listing.needles} Needles, Area: ${listing.area}, Year: ${listing.year}\n  Description: ${listing.description}\n\nSeller:\n  ${seller ? `Name: ${seller.firstName} ${seller.lastName}` : `ID: ${listing.sellerId}`}\n  ${seller?.email ? `Email: ${seller.email}` : ""}\n  ${seller?.mobile ? `Mobile: ${seller.mobile}` : ""}`;
 
         await sendEmail(ADMIN_EMAIL, `New Lead for ${listing.title}`, emailBody);
       }
@@ -203,8 +246,10 @@ export async function registerRoutes(
   });
 
   app.get(api.leads.list.path, isAuthenticated, async (req: any, res) => {
-    // @ts-ignore
-    const isAdmin = req.user.isAdmin || req.user.claims?.email === ADMIN_EMAIL;
+    const userId = getUserId(req);
+    const userEmail = getUserEmail(req);
+    const user = await storage.getUser(userId);
+    const isAdmin = userEmail === ADMIN_EMAIL || user?.isAdmin === true;
     
     if (!isAdmin) {
       return res.status(403).json({ message: "Forbidden: Admin only" });
@@ -214,22 +259,34 @@ export async function registerRoutes(
     res.json(leads);
   });
 
-  // Seed Data
   const existingAdmin = await authStorage.getUserByUsername("Admin");
   if (!existingAdmin) {
+    const hashedPw = await hashPassword("Antman@1976");
     await authStorage.upsertUser({
       id: "admin-id",
       username: "Admin",
-      password: "Antman@1976",
+      email: ADMIN_EMAIL,
+      password: hashedPw,
       isAdmin: true,
       firstName: "Admin",
       lastName: "User"
+    });
+  } else if (!existingAdmin.email || (existingAdmin.password && !existingAdmin.password.startsWith("$2"))) {
+    const hashedPw = await hashPassword("Antman@1976");
+    await authStorage.upsertUser({
+      id: existingAdmin.id,
+      username: "Admin",
+      email: ADMIN_EMAIL,
+      password: hashedPw,
+      isAdmin: true,
+      firstName: existingAdmin.firstName || "Admin",
+      lastName: existingAdmin.lastName || "User"
     });
   }
 
   if ((await storage.getListings()).length === 0) {
     console.log("Seeding database...");
-    const demoSellerId = "demo-seller"; // This won't map to a real user unless one logs in with this ID, but good for display
+    const demoSellerId = "demo-seller";
     
     await storage.createListing({
       title: "Tajima TMAR-K1506C",

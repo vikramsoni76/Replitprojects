@@ -10,12 +10,14 @@ import Browse from "@/pages/browse";
 import Dashboard from "@/pages/dashboard";
 import Admin from "@/pages/admin";
 import ListingDetails from "@/pages/listing-details";
+import AuthPage from "@/pages/auth";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/browse" component={Browse} />
+      <Route path="/auth" component={AuthPage} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/admin" component={Admin} />
       <Route path="/listing/:id" component={ListingDetails} />

@@ -1,6 +1,7 @@
 import * as client from "openid-client";
 import { Strategy, type VerifyFunction } from "openid-client/passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import bcrypt from "bcrypt";
 
 import passport from "passport";
 import session from "express-session";
@@ -8,6 +9,8 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
+
+const SALT_ROUNDS = 10;
 
 const getOidcConfig = memoize(
   async () => {
@@ -20,7 +23,7 @@ const getOidcConfig = memoize(
 );
 
 export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const sessionTtl = 7 * 24 * 60 * 60 * 1000;
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
@@ -35,7 +38,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false, // Changed for local development if needed
+      secure: false,
       maxAge: sessionTtl,
     },
   });
@@ -61,29 +64,49 @@ async function upsertUser(claims: any) {
   });
 }
 
+async function verifyPassword(plaintext: string, stored: string): Promise<boolean> {
+  if (stored.startsWith("$2")) {
+    return bcrypt.compare(plaintext, stored);
+  }
+  return plaintext === stored;
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, SALT_ROUNDS);
+}
+
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Local Strategy for Admin
-  passport.use(new LocalStrategy(async (username, password, done) => {
-    try {
-      const user = await authStorage.getUserByUsername(username);
-      if (!user || user.password !== password) {
-        return done(null, false, { message: "Invalid username or password" });
+  passport.use(new LocalStrategy(
+    { usernameField: "email", passwordField: "password" },
+    async (email, password, done) => {
+      try {
+        let user = await authStorage.getUserByEmail(email);
+        if (!user) {
+          user = await authStorage.getUserByUsername(email);
+        }
+        if (!user || !user.password) {
+          return done(null, false, { message: "Invalid email or password" });
+        }
+        const valid = await verifyPassword(password, user.password);
+        if (!valid) {
+          return done(null, false, { message: "Invalid email or password" });
+        }
+        return done(null, {
+          id: user.id,
+          username: user.username,
+          isAdmin: user.isAdmin,
+          claims: { sub: user.id, email: user.email }
+        });
+      } catch (err) {
+        return done(err);
       }
-      return done(null, {
-        id: user.id,
-        username: user.username,
-        isAdmin: user.isAdmin,
-        claims: { sub: user.id, email: user.email }
-      });
-    } catch (err) {
-      return done(err);
     }
-  }));
+  ));
 
   const config = await getOidcConfig().catch(() => null);
 
@@ -98,10 +121,8 @@ export async function setupAuth(app: Express) {
       verified(null, user);
     };
 
-    // Keep track of registered strategies
     const registeredStrategies = new Set<string>();
 
-    // Helper function to ensure strategy exists for a domain
     const ensureStrategy = (domain: string) => {
       const strategyName = `replitauth:${domain}`;
       if (!registeredStrategies.has(strategyName)) {
@@ -119,63 +140,77 @@ export async function setupAuth(app: Express) {
       }
     };
 
-    app.get("/api/login", (req, res, next) => {
-      // Return a simple login page since user requested username/password login
-      res.send(`
-        <html>
-          <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f5;">
-            <form action="/api/login" method="POST" style="background: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); width: 100%; max-width: 400px;">
-              <h1 style="margin-top: 0; font-size: 1.5rem; margin-bottom: 1.5rem;">Admin Login</h1>
-              <div style="margin-bottom: 1rem;">
-                <label style="display: block; margin-bottom: 0.5rem;">Username</label>
-                <input type="text" name="username" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.25rem;">
-              </div>
-              <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; margin-bottom: 0.5rem;">Password</label>
-                <input type="password" name="password" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.25rem;">
-              </div>
-              <button type="submit" style="width: 100%; padding: 0.75rem; background: #2563eb; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Login</button>
-            </form>
-          </body>
-        </html>
-      `);
-    });
-
     app.get("/api/callback", (req, res, next) => {
       ensureStrategy(req.hostname);
       passport.authenticate(`replitauth:${req.hostname}`, {
         successReturnToOrRedirect: "/",
-        failureRedirect: "/api/login",
+        failureRedirect: "/auth",
       })(req, res, next);
-    });
-
-    app.get("/api/logout", (req, res) => {
-      req.logout(() => {
-        res.redirect("/");
-      });
     });
   }
 
-  // Local login endpoint
+  app.get("/api/logout", (req, res) => {
+    req.logout(() => {
+      res.redirect("/");
+    });
+  });
+
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) return next(err);
-      if (!user) return res.status(401).send(`
-        <html>
-          <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f5;">
-            <div style="background: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); width: 100%; max-width: 400px; text-align: center;">
-              <h1 style="color: #dc2626; font-size: 1.5rem; margin-bottom: 1rem;">Login Failed</h1>
-              <p style="margin-bottom: 1.5rem;">${info?.message || "Invalid credentials"}</p>
-              <a href="/api/login" style="display: inline-block; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 0.25rem;">Try Again</a>
-            </div>
-          </body>
-        </html>
-      `);
+      if (!user) {
+        return res.status(401).json({ message: info?.message || "Invalid credentials" });
+      }
       req.logIn(user, (err) => {
         if (err) return next(err);
-        res.redirect("/");
+        res.json({
+          id: user.id,
+          username: user.username,
+          isAdmin: user.isAdmin,
+          email: user.claims?.email
+        });
       });
     })(req, res, next);
+  });
+
+  app.post("/api/register", async (req, res) => {
+    try {
+      const { firstName, lastName, email, mobile, address, password } = req.body;
+      if (!firstName || !email || !password) {
+        return res.status(400).json({ message: "Name, email, and password are required" });
+      }
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+      const existing = await authStorage.getUserByEmail(email);
+      if (existing) {
+        return res.status(409).json({ message: "An account with this email already exists" });
+      }
+      const hashedPassword = await hashPassword(password);
+      const user = await authStorage.upsertUser({
+        email,
+        firstName,
+        lastName: lastName || "",
+        mobile: mobile || "",
+        address: address || "",
+        password: hashedPassword,
+        isAdmin: false,
+      });
+      const sessionUser = {
+        id: user.id,
+        username: user.username,
+        isAdmin: false,
+        claims: { sub: user.id, email: user.email }
+      };
+      req.logIn(sessionUser, (err) => {
+        if (err) return res.status(500).json({ message: "Registration succeeded but login failed" });
+        const { password: _, ...safeUser } = user;
+        res.status(201).json(safeUser);
+      });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Registration failed" });
+    }
   });
 
   passport.serializeUser((user: any, cb) => cb(null, user));
@@ -189,8 +224,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  // For local login, we don't have OIDC tokens
-  if (user.username === "Admin") {
+  if (user.claims?.sub) {
     return next();
   }
 

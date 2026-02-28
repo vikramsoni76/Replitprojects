@@ -17,9 +17,9 @@ export default function Dashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) return <div>Loading...</div>;
-  if (!isAuthenticated) return <Redirect to="/api/login" />;
+  if (!isAuthenticated) return <Redirect to="/auth" />;
 
-  const isAdmin = user?.email === "vikramsoni76@gmail.com";
+  const isAdmin = user?.isAdmin === true || user?.email === "vikramsoni76@gmail.com";
   
   return (
     <div className="min-h-screen bg-background flex flex-col">

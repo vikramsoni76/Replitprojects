@@ -58,9 +58,9 @@ export default function Home() {
                   Browse Inventory
                 </Button>
               </Link>
-              <a href="/api/login" className="text-sm font-semibold leading-6 text-white hover:text-primary transition-colors">
+              <Link href="/auth" className="text-sm font-semibold leading-6 text-white hover:text-primary transition-colors">
                 Sell Your Machine <span aria-hidden="true">→</span>
-              </a>
+              </Link>
             </motion.div>
           </div>
         </div>

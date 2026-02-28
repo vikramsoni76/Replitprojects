@@ -11,7 +11,7 @@ export default function Admin() {
   const { user, isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) return <div>Loading...</div>;
-  if (!isAuthenticated) return <Redirect to="/api/login" />;
+  if (!isAuthenticated) return <Redirect to="/auth" />;
   
   // Basic check - real app would use backend role
   if (user?.email !== "vikramsoni76@gmail.com") {
