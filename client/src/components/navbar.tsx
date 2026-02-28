@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, LogOut, LayoutDashboard, User, Package, Settings, Plus } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, Package, Settings, Plus, Home, Search } from "lucide-react";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -45,7 +45,13 @@ export function Navbar() {
 
         <div className="flex items-center gap-4">
           {isAuthenticated ? (
-            <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4">
+              <Link href="/sell">
+                <Button size="sm" className="bg-primary hover:bg-primary/90" data-testid="button-sell-nav">
+                  <Plus className="mr-1 h-4 w-4" /> Sell Machine
+                </Button>
+              </Link>
+
               <Link href="/dashboard">
                 <Button variant={location.startsWith('/dashboard') ? "secondary" : "ghost"}>
                   <LayoutDashboard className="mr-2 h-4 w-4" />
@@ -95,7 +101,7 @@ export function Navbar() {
               </DropdownMenu>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <Link href="/auth">
                 <Button variant="ghost" size="sm" data-testid="button-login">Log in</Button>
               </Link>
@@ -105,19 +111,77 @@ export function Navbar() {
             </div>
           )}
 
-          {isAuthenticated && (
-            <Link href="/sell">
-              <Button size="sm" className="bg-primary hover:bg-primary/90 ml-2" data-testid="button-sell-nav">
-                <Plus className="mr-1 h-4 w-4" /> Sell Machine
-              </Button>
-            </Link>
-          )}
-
-          {/* Mobile Menu Trigger - Simplified for now */}
           <div className="md:hidden">
-             <Button variant="ghost" size="icon">
-               <Menu className="h-5 w-5" />
-             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 bg-background border shadow-lg" align="end" forceMount>
+                <DropdownMenuItem asChild>
+                  <Link href="/" className="cursor-pointer">
+                    <Home className="mr-2 h-4 w-4" />
+                    <span>Home</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/browse" className="cursor-pointer">
+                    <Search className="mr-2 h-4 w-4" />
+                    <span>Browse Machines</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={isAuthenticated ? "/sell" : "/auth"} className="cursor-pointer">
+                    <Plus className="mr-2 h-4 w-4" />
+                    <span>Sell Machine</span>
+                  </Link>
+                </DropdownMenuItem>
+
+                {isAuthenticated && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="cursor-pointer">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        <span>Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="cursor-pointer">
+                        <Package className="mr-2 h-4 w-4" />
+                        <span>My Listings</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="cursor-pointer">
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Admin Console</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => logout()} className="text-red-600 focus:text-red-600 cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                {!isAuthenticated && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/auth" className="cursor-pointer">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log in / Register</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
