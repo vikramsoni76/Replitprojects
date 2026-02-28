@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ListingForm } from "@/components/listing-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Edit, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Redirect } from "wouter";
 
 export default function Dashboard() {
+  usePageTitle("Dashboard");
   const { user, isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) return <div>Loading...</div>;

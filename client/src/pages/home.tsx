@@ -5,15 +5,34 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowRight, CheckCircle2, Factory, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 export default function Home() {
+  usePageTitle();
   const { data: listings, isLoading } = useListings({ status: 'approved' });
 
   // Filter for featured (just take first 3 for now)
   const featuredListings = listings?.slice(0, 3);
 
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "EmbMarket",
+    "url": "https://embmarket.replit.app",
+    "description": "India's trusted marketplace for used embroidery machines",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://embmarket.replit.app/browse?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <Navbar />
       
       {/* Hero Section */}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/navbar";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function AuthPage() {
+  usePageTitle("Login or Register");
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();

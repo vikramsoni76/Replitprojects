@@ -17,6 +17,7 @@ import { z } from "zod";
 import { Check, Mail, Phone, User, Calendar, Gauge, Grid3X3, Maximize } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const leadFormSchema = insertLeadSchema.extend({
   buyerPhone: z.string().min(10, "Valid phone number required"),
@@ -26,6 +27,7 @@ export default function ListingDetails() {
   const [, params] = useRoute("/listing/:id");
   const listingId = params ? parseInt(params.id) : 0;
   const { data: listing, isLoading } = useListing(listingId);
+  usePageTitle(listing ? `${listing.title} - Used Embroidery Machine` : "Machine Details");
   const createLeadMutation = useCreateLead();
   const [open, setOpen] = useState(false);
   

@@ -4,8 +4,10 @@ import { ListingForm } from "@/components/listing-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { Redirect, useLocation } from "wouter";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 export default function SellPage() {
+  usePageTitle("Sell Your Machine");
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 

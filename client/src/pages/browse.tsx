@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Search, FilterX } from "lucide-react";
 import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 export default function Browse() {
+  usePageTitle("Browse Used Embroidery Machines");
   const { data: listings, isLoading } = useListings({ status: 'approved' });
   const [searchTerm, setSearchTerm] = useState("");
   const [headFilter, setHeadFilter] = useState("all");

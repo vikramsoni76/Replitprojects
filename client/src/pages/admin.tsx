@@ -6,8 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
 import { Redirect } from "wouter";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 export default function Admin() {
+  usePageTitle("Admin Console");
   const { user, isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) return <div>Loading...</div>;
