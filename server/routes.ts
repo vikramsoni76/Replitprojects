@@ -10,25 +10,13 @@ import nodemailer from "nodemailer";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-
-const uploadDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const fileStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
+import { uploadedFiles } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 const upload = multer({
-  storage: fileStorage,
-  limits: { fileSize: 50 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp|mp4|mov|avi|webm/;
     const ext = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -87,7 +75,8 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
-  app.use("/uploads", (req, res, next) => {
+  app.use("/uploads", (req, res) => {
+    const uploadDir = path.join(process.cwd(), "uploads");
     const filePath = path.resolve(uploadDir, req.path.replace(/^\//, ""));
     if (!filePath.startsWith(path.resolve(uploadDir))) {
       return res.status(403).json({ message: "Forbidden" });
@@ -99,13 +88,47 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/upload", isAuthenticated, upload.array("files", 10), (req, res) => {
-    const files = req.files as Express.Multer.File[];
-    if (!files || files.length === 0) {
-      return res.status(400).json({ message: "No files uploaded" });
+  app.get("/api/files/:id", async (req, res) => {
+    try {
+      const fileId = Number(req.params.id);
+      if (isNaN(fileId)) {
+        return res.status(400).json({ message: "Invalid file ID" });
+      }
+      const [file] = await db.select().from(uploadedFiles).where(eq(uploadedFiles.id, fileId));
+      if (!file) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      const buffer = Buffer.from(file.data, "base64");
+      res.set("Content-Type", file.mimetype);
+      res.set("Cache-Control", "public, max-age=31536000, immutable");
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error serving file:", error);
+      res.status(500).json({ message: "Failed to serve file" });
     }
-    const urls = files.map((f) => `/uploads/${f.filename}`);
-    res.json({ urls });
+  });
+
+  app.post("/api/upload", isAuthenticated, upload.array("files", 10), async (req, res) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+      const urls: string[] = [];
+      for (const file of files) {
+        const base64Data = file.buffer.toString("base64");
+        const [inserted] = await db.insert(uploadedFiles).values({
+          filename: file.originalname,
+          mimetype: file.mimetype,
+          data: base64Data,
+        }).returning();
+        urls.push(`/api/files/${inserted.id}`);
+      }
+      res.json({ urls });
+    } catch (error) {
+      console.error("Upload error:", error);
+      res.status(500).json({ message: "Failed to upload files" });
+    }
   });
 
   app.get(api.listings.list.path, async (req, res) => {

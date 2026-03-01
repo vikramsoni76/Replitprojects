@@ -48,6 +48,14 @@ export const leadsRelations = relations(leads, ({ one }) => ({
   }),
 }));
 
+export const uploadedFiles = pgTable("uploaded_files", {
+  id: serial("id").primaryKey(),
+  filename: text("filename").notNull(),
+  mimetype: text("mimetype").notNull(),
+  data: text("data").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertListingSchema = createInsertSchema(listings).omit({ 
   id: true, 
   sellerId: true, 

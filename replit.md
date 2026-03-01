@@ -8,7 +8,7 @@ A full-stack used embroidery machinery marketplace with three roles: Seller, Buy
 - **Backend**: Express.js, Node.js
 - **Database**: PostgreSQL with Drizzle ORM
 - **Auth**: Local username/password (Passport.js local strategy) + Replit OIDC fallback
-- **File Upload**: Multer (stored in `/uploads` directory)
+- **File Upload**: Multer (memory storage) → PostgreSQL database (base64)
 - **Email**: Nodemailer (SMTP config via env vars)
 
 ## Key Files
@@ -42,9 +42,11 @@ A full-stack used embroidery machinery marketplace with three roles: Seller, Buy
 - Admin can approve/reject listings, view all leads
 
 ## File Uploads
-- Photos and videos uploaded via `/api/upload` endpoint (multer)
-- Files stored in `/uploads` directory, served via `/uploads/:filename`
-- Max 10 photos per listing, max 50MB per video file
+- Photos and videos uploaded via `/api/upload` endpoint (multer with memory storage)
+- Files stored in PostgreSQL `uploaded_files` table as base64 text
+- New files served via `/api/files/:id`
+- Legacy `/uploads/:filename` route still supported for backward compatibility (serves from disk if file exists)
+- Max 10 photos per listing, max 10MB per file
 
 ## Email Notifications
 - New listing → admin gets email with full machine and seller details

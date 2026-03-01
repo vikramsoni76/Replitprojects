@@ -96,8 +96,8 @@ export function ListingForm({ initialData, onSuccess }: ListingFormProps) {
   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        toast({ title: "Video must be under 50MB", variant: "destructive" });
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: "Video must be under 10MB", variant: "destructive" });
         return;
       }
       setVideoFile(file);
