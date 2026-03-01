@@ -4,7 +4,6 @@ import { useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -14,10 +13,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertLeadSchema } from "@shared/schema";
 import { z } from "zod";
-import { Check, Mail, Phone, User, Calendar, Gauge, Grid3X3, Maximize } from "lucide-react";
+import { Check, Mail, Phone, User, Calendar, Gauge, Grid3X3, Maximize, Share2, Copy, ExternalLink } from "lucide-react";
+import { SiWhatsapp, SiFacebook, SiTelegram } from "react-icons/si";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/use-page-title";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const leadFormSchema = insertLeadSchema.extend({
   buyerPhone: z.string().min(10, "Valid phone number required"),
@@ -30,6 +36,8 @@ export default function ListingDetails() {
   usePageTitle(listing ? `${listing.title} - Used Embroidery Machine` : "Machine Details");
   const createLeadMutation = useCreateLead();
   const [open, setOpen] = useState(false);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+  const { toast } = useToast();
   
   const form = useForm({
     resolver: zodResolver(leadFormSchema),
@@ -53,7 +61,31 @@ export default function ListingDetails() {
   if (isLoading) return <DetailsSkeleton />;
   if (!listing) return <div className="min-h-screen flex items-center justify-center">Listing not found</div>;
 
-  const mainPhoto = listing.photos?.[0] || "https://images.unsplash.com/photo-1620288627223-537a2d246215?q=80&w=600";
+  const photos = listing.photos?.length ? listing.photos : ["https://images.unsplash.com/photo-1620288627223-537a2d246215?q=80&w=600"];
+  const mainPhoto = photos[selectedPhotoIndex] || photos[0];
+
+  const listingUrl = `${window.location.origin}/listing/${listing.id}`;
+  const shareText = `Check out this ${listing.title} - ${listing.heads} head, ${listing.needles} needle embroidery machine (${listing.year}) on EmbMarket!`;
+
+  const handleShare = (platform: string) => {
+    const encodedUrl = encodeURIComponent(listingUrl);
+    const encodedText = encodeURIComponent(shareText);
+
+    const urls: Record<string, string> = {
+      whatsapp: `https://wa.me/?text=${encodedText}%20${encodedUrl}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+      telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
+    };
+
+    if (platform === "copy") {
+      navigator.clipboard.writeText(listingUrl).then(() => {
+        toast({ title: "Link copied!", description: "Listing link has been copied to your clipboard." });
+      });
+      return;
+    }
+
+    window.open(urls[platform], "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -61,25 +93,66 @@ export default function ListingDetails() {
       
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Left Column: Images */}
           <div className="space-y-4">
             <div className="aspect-[4/3] rounded-2xl overflow-hidden border shadow-sm bg-muted">
-              <img src={mainPhoto} alt={listing.title} className="w-full h-full object-cover" />
+              <img
+                src={mainPhoto}
+                alt={listing.title}
+                className="w-full h-full object-cover transition-all duration-300"
+                data-testid="img-main-photo"
+              />
             </div>
-            <div className="grid grid-cols-4 gap-4">
-              {listing.photos?.map((photo, i) => (
-                <div key={i} className="aspect-square rounded-lg overflow-hidden border cursor-pointer hover:ring-2 ring-primary">
-                  <img src={photo} alt="" className="w-full h-full object-cover" />
-                </div>
-              ))}
-            </div>
+            {photos.length > 1 && (
+              <div className="grid grid-cols-4 gap-4">
+                {photos.map((photo, i) => (
+                  <div
+                    key={i}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all duration-200 hover:opacity-90 ${
+                      i === selectedPhotoIndex
+                        ? "border-primary ring-2 ring-primary/30"
+                        : "border-transparent hover:border-primary/50"
+                    }`}
+                    onClick={() => setSelectedPhotoIndex(i)}
+                    data-testid={`thumbnail-photo-${i}`}
+                  >
+                    <img src={photo} alt={`${listing.title} photo ${i + 1}`} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Right Column: Details */}
           <div>
-            <div className="flex justify-between items-start">
-              <h1 className="text-3xl font-display font-bold leading-tight">{listing.title}</h1>
-              {listing.status === 'sold' && <Badge variant="destructive" className="text-sm">SOLD</Badge>}
+            <div className="flex justify-between items-start gap-4">
+              <h1 className="text-3xl font-display font-bold leading-tight" data-testid="text-listing-title">{listing.title}</h1>
+              <div className="flex items-center gap-2 shrink-0">
+                {listing.status === 'sold' && <Badge variant="destructive" className="text-sm">SOLD</Badge>}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" data-testid="button-share">
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-48 bg-background border shadow-lg" align="end">
+                    <DropdownMenuItem onClick={() => handleShare("whatsapp")} className="cursor-pointer" data-testid="share-whatsapp">
+                      <SiWhatsapp className="mr-2 h-4 w-4 text-green-500" />
+                      <span>WhatsApp</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleShare("facebook")} className="cursor-pointer" data-testid="share-facebook">
+                      <SiFacebook className="mr-2 h-4 w-4 text-blue-600" />
+                      <span>Facebook</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleShare("telegram")} className="cursor-pointer" data-testid="share-telegram">
+                      <SiTelegram className="mr-2 h-4 w-4 text-sky-500" />
+                      <span>Telegram</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleShare("copy")} className="cursor-pointer" data-testid="share-copy-link">
+                      <Copy className="mr-2 h-4 w-4" />
+                      <span>Copy Link</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
             <p className="text-muted-foreground mt-2 text-lg">
@@ -102,7 +175,7 @@ export default function ListingDetails() {
 
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button size="lg" className="w-full text-lg h-14" disabled={listing.status === 'sold'}>
+                <Button size="lg" className="w-full text-lg h-14" disabled={listing.status === 'sold'} data-testid="button-interested">
                   {listing.status === 'sold' ? "Currently Unavailable" : "I'm Interested"}
                 </Button>
               </DialogTrigger>
@@ -119,7 +192,7 @@ export default function ListingDetails() {
                     <Label>Your Name</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input className="pl-9" {...form.register("buyerName")} placeholder="John Doe" />
+                      <Input className="pl-9" {...form.register("buyerName")} placeholder="John Doe" data-testid="input-buyer-name" />
                     </div>
                     {form.formState.errors.buyerName && <p className="text-red-500 text-xs">{form.formState.errors.buyerName.message}</p>}
                   </div>
@@ -128,7 +201,7 @@ export default function ListingDetails() {
                     <Label>Email Address</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input className="pl-9" {...form.register("buyerEmail")} placeholder="john@company.com" />
+                      <Input className="pl-9" {...form.register("buyerEmail")} placeholder="john@company.com" data-testid="input-buyer-email" />
                     </div>
                   </div>
 
@@ -136,12 +209,12 @@ export default function ListingDetails() {
                     <Label>Phone Number</Label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input className="pl-9" {...form.register("buyerPhone")} placeholder="+1 (555) 000-0000" />
+                      <Input className="pl-9" {...form.register("buyerPhone")} placeholder="+91 98765 43210" data-testid="input-buyer-phone" />
                     </div>
                   </div>
 
                   <DialogFooter>
-                    <Button type="submit" className="w-full" disabled={createLeadMutation.isPending}>
+                    <Button type="submit" className="w-full" disabled={createLeadMutation.isPending} data-testid="button-send-request">
                       {createLeadMutation.isPending ? "Sending..." : "Send Request"}
                     </Button>
                   </DialogFooter>
