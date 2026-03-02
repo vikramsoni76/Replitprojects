@@ -19,6 +19,15 @@ import { Loader2, Upload, X, Image as ImageIcon, Video } from "lucide-react";
 import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 
+const MAX_PHOTOS = 10;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 const formSchema = insertListingSchema.extend({
   heads: z.coerce.number().min(1, "Must have at least 1 head"),
   needles: z.coerce.number().min(1, "Must have at least 1 needle"),
@@ -67,8 +76,8 @@ export function ListingForm({ initialData, onSuccess }: ListingFormProps) {
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length + photoFiles.length + photoPreviews.length > 10) {
-      toast({ title: "Maximum 10 photos allowed", variant: "destructive" });
+    if (files.length + photoFiles.length + photoPreviews.length > MAX_PHOTOS) {
+      toast({ title: `Maximum ${MAX_PHOTOS} photos allowed`, variant: "destructive" });
       return;
     }
     setPhotoFiles((prev) => [...prev, ...files]);
@@ -96,8 +105,8 @@ export function ListingForm({ initialData, onSuccess }: ListingFormProps) {
   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        toast({ title: "Video must be under 10MB", variant: "destructive" });
+      if (file.size > MAX_FILE_SIZE) {
+        toast({ title: `Video must be under ${formatFileSize(MAX_FILE_SIZE)}`, variant: "destructive" });
         return;
       }
       setVideoFile(file);
@@ -272,10 +281,29 @@ export function ListingForm({ initialData, onSuccess }: ListingFormProps) {
         />
 
         <div>
-          <FormLabel>Machine Photos *</FormLabel>
-          <FormDescription className="mb-3">
-            Upload up to 10 photos of your machine. Show front, back, control panel, and any accessories.
+          <div className="flex items-center justify-between mb-1">
+            <FormLabel>Machine Photos *</FormLabel>
+            <span
+              className={`text-xs font-medium ${photoPreviews.length >= MAX_PHOTOS ? "text-red-500" : photoPreviews.length >= MAX_PHOTOS * 0.8 ? "text-amber-500" : "text-muted-foreground"}`}
+              data-testid="text-photo-capacity"
+            >
+              {photoPreviews.length} / {MAX_PHOTOS} photos
+            </span>
+          </div>
+          <FormDescription className="mb-2">
+            Upload up to {MAX_PHOTOS} photos (max {formatFileSize(MAX_FILE_SIZE)} each). Show front, back, control panel, and any accessories.
           </FormDescription>
+          <div className="w-full bg-muted rounded-full h-2 mb-3" data-testid="progress-photo-capacity">
+            <div
+              className={`h-2 rounded-full transition-all ${photoPreviews.length >= MAX_PHOTOS ? "bg-red-500" : photoPreviews.length >= MAX_PHOTOS * 0.8 ? "bg-amber-500" : "bg-primary"}`}
+              style={{ width: `${(photoPreviews.length / MAX_PHOTOS) * 100}%` }}
+            />
+          </div>
+          {photoFiles.length > 0 && (
+            <p className="text-xs text-muted-foreground mb-2" data-testid="text-photo-size">
+              New photos total: {formatFileSize(photoFiles.reduce((sum, f) => sum + f.size, 0))}
+            </p>
+          )}
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-3">
             {photoPreviews.map((preview, index) => (
               <div key={index} className="relative aspect-square rounded-lg border overflow-hidden group" data-testid={`photo-preview-${index}`}>
@@ -294,7 +322,7 @@ export function ListingForm({ initialData, onSuccess }: ListingFormProps) {
                 </button>
               </div>
             ))}
-            {photoPreviews.length < 10 && (
+            {photoPreviews.length < MAX_PHOTOS && (
               <button
                 type="button"
                 onClick={() => photoInputRef.current?.click()}
@@ -317,14 +345,30 @@ export function ListingForm({ initialData, onSuccess }: ListingFormProps) {
         </div>
 
         <div>
-          <FormLabel>Machine Video (Optional)</FormLabel>
-          <FormDescription className="mb-3">
-            Upload a short video showing the machine running, or paste a YouTube link.
+          <div className="flex items-center justify-between mb-1">
+            <FormLabel>Machine Video (Optional)</FormLabel>
+            <span className="text-xs font-medium text-muted-foreground" data-testid="text-video-capacity">
+              {videoFile ? `${formatFileSize(videoFile.size)} / ${formatFileSize(MAX_FILE_SIZE)}` : videoPreview ? "1 / 1 video" : "0 / 1 video"}
+            </span>
+          </div>
+          <FormDescription className="mb-2">
+            Upload a short video (max {formatFileSize(MAX_FILE_SIZE)}) showing the machine running, or paste a YouTube link.
           </FormDescription>
+          {videoFile && (
+            <div className="w-full bg-muted rounded-full h-2 mb-3" data-testid="progress-video-capacity">
+              <div
+                className={`h-2 rounded-full transition-all ${videoFile.size > MAX_FILE_SIZE * 0.8 ? "bg-amber-500" : "bg-primary"}`}
+                style={{ width: `${Math.min((videoFile.size / MAX_FILE_SIZE) * 100, 100)}%` }}
+              />
+            </div>
+          )}
           {videoPreview ? (
             <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30" data-testid="video-preview">
               <Video className="h-5 w-5 text-muted-foreground flex-shrink-0" />
               <span className="text-sm truncate flex-1">{videoPreview}</span>
+              {videoFile && (
+                <span className="text-xs text-muted-foreground flex-shrink-0">{formatFileSize(videoFile.size)}</span>
+              )}
               <button
                 type="button"
                 onClick={removeVideo}
