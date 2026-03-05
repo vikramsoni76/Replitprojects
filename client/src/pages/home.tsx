@@ -3,7 +3,7 @@ import { useListings } from "@/hooks/use-listings";
 import { MachineCard } from "@/components/machine-card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ArrowRight, CheckCircle2, Factory, TrendingUp } from "lucide-react";
+import { ArrowRight, CheckCircle2, Factory, TrendingUp, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import { usePageTitle } from "@/hooks/use-page-title";
 
@@ -157,6 +157,25 @@ export default function Home() {
           <div className="mt-10 sm:hidden">
             <Link href="/browse">
               <Button className="w-full">View All Inventory</Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-slate-50 border-t py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-2xl mx-auto text-center">
+            <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary mx-auto mb-4">
+              <MessageSquare className="h-7 w-7" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-display font-bold">Have Questions or Suggestions?</h2>
+            <p className="mt-3 text-muted-foreground">
+              Whether you're buying, selling, or just have feedback to make EmbMarket better — we're here to help.
+            </p>
+            <Link href="/contact">
+              <Button size="lg" variant="outline" className="mt-6" data-testid="button-home-contact">
+                Contact Us <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </Link>
           </div>
         </div>

@@ -12,7 +12,7 @@ A full-stack used embroidery machinery marketplace with three roles: Seller, Buy
 - **Email**: Nodemailer (SMTP config via env vars)
 
 ## Key Files
-- `shared/schema.ts` - Database schema (listings, leads, users, sessions)
+- `shared/schema.ts` - Database schema (listings, leads, users, sessions, contact_messages, uploaded_files)
 - `shared/models/auth.ts` - User model with fields: id, username, password, email, firstName, lastName, mobile, address, isAdmin
 - `server/routes.ts` - API routes, file upload endpoint, seed data
 - `server/storage.ts` - Database CRUD operations
@@ -26,6 +26,7 @@ A full-stack used embroidery machinery marketplace with three roles: Seller, Buy
 - `client/src/pages/admin.tsx` - Admin approval console
 - `client/src/pages/listing-details.tsx` - Individual listing page
 - `client/src/components/listing-form.tsx` - Machine listing form with photo/video upload
+- `client/src/pages/contact.tsx` - Contact Us page with form
 - `client/src/components/navbar.tsx` - Navigation bar
 - `client/src/hooks/use-auth.ts` - Authentication hook
 
@@ -48,7 +49,15 @@ A full-stack used embroidery machinery marketplace with three roles: Seller, Buy
 - Legacy `/uploads/:filename` route still supported for backward compatibility (serves from disk if file exists)
 - Max 10 photos per listing, max 10MB per file
 
+## Contact Us
+- Contact form at `/contact` (no login required)
+- Submissions stored in `contact_messages` table
+- POST /api/contact - submit a message (public)
+- GET /api/contact - list messages (admin only)
+- Admin notified via email on new submissions
+
 ## Email Notifications
 - New listing → admin gets email with full machine and seller details
 - New lead → admin gets email with buyer + machine + seller details
+- New contact message → admin gets email with sender details and message
 - Requires SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS env vars

@@ -10,7 +10,7 @@ import nodemailer from "nodemailer";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { uploadedFiles } from "@shared/schema";
+import { uploadedFiles, insertContactMessageSchema } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -280,6 +280,38 @@ export async function registerRoutes(
 
     const leads = await storage.getLeads();
     res.json(leads);
+  });
+
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const input = insertContactMessageSchema.parse(req.body);
+      const message = await storage.createContactMessage(input);
+
+      const emailBody = `New Contact Form Submission\n\nFrom: ${input.name}\nEmail: ${input.email}\nPhone: ${input.phone || "Not provided"}\nSubject: ${input.subject}\n\nMessage:\n${input.message}`;
+      await sendEmail(ADMIN_EMAIL, `Contact: ${input.subject}`, emailBody);
+
+      res.status(201).json(message);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.get("/api/contact", isAuthenticated, async (req: any, res) => {
+    const userId = getUserId(req);
+    const userEmail = getUserEmail(req);
+    const user = await storage.getUser(userId);
+    const isAdmin = userEmail === ADMIN_EMAIL || user?.isAdmin === true;
+    if (!isAdmin) {
+      return res.status(403).json({ message: "Forbidden: Admin only" });
+    }
+    const messages = await storage.getContactMessages();
+    res.json(messages);
   });
 
   const existingAdmin = await authStorage.getUserByUsername("Admin");

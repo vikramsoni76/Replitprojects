@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, LogOut, LayoutDashboard, Package, Settings, Plus, Home, Search } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, Package, Settings, Plus, Home, Search, MessageSquare } from "lucide-react";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -39,6 +39,13 @@ export function Navbar() {
               className={`transition-colors hover:text-primary ${location === '/browse' ? 'text-primary' : 'text-foreground/60'}`}
             >
               Browse Machines
+            </Link>
+            <Link 
+              href="/contact" 
+              className={`transition-colors hover:text-primary ${location === '/contact' ? 'text-primary' : 'text-foreground/60'}`}
+              data-testid="link-contact-nav"
+            >
+              Contact Us
             </Link>
           </nav>
         </div>
@@ -135,6 +142,12 @@ export function Navbar() {
                   <Link href={isAuthenticated ? "/sell" : "/auth"} className="cursor-pointer">
                     <Plus className="mr-2 h-4 w-4" />
                     <span>Sell Machine</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/contact" className="cursor-pointer" data-testid="link-contact-mobile">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    <span>Contact Us</span>
                   </Link>
                 </DropdownMenuItem>
 

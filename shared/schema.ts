@@ -48,6 +48,17 @@ export const leadsRelations = relations(leads, ({ one }) => ({
   }),
 }));
 
+export const contactMessages = pgTable("contact_messages", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  status: text("status", { enum: ["new", "read", "resolved"] }).default("new").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const uploadedFiles = pgTable("uploaded_files", {
   id: serial("id").primaryKey(),
   filename: text("filename").notNull(),
@@ -68,7 +79,15 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   createdAt: true 
 });
 
+export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({
+  id: true,
+  status: true,
+  createdAt: true,
+});
+
 export type Listing = typeof listings.$inferSelect;
 export type InsertListing = z.infer<typeof insertListingSchema>;
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
+export type ContactMessage = typeof contactMessages.$inferSelect;
+export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;

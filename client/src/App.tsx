@@ -12,6 +12,7 @@ import Admin from "@/pages/admin";
 import ListingDetails from "@/pages/listing-details";
 import AuthPage from "@/pages/auth";
 import SellPage from "@/pages/sell";
+import ContactPage from "@/pages/contact";
 
 function Router() {
   return (
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/admin" component={Admin} />
       <Route path="/listing/:id" component={ListingDetails} />
+      <Route path="/contact" component={ContactPage} />
       <Route component={NotFound} />
     </Switch>
   );
