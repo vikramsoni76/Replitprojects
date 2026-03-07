@@ -13,9 +13,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertLeadSchema } from "@shared/schema";
 import { z } from "zod";
-import { Check, Mail, Phone, User, Calendar, Gauge, Grid3X3, Maximize, Share2, Copy, ExternalLink } from "lucide-react";
+import { Check, Mail, Phone, User, Calendar, Gauge, Grid3X3, Maximize, Share2, Copy, ExternalLink, Play, X } from "lucide-react";
 import { SiWhatsapp, SiFacebook, SiTelegram } from "react-icons/si";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/use-page-title";
 import {
@@ -37,6 +37,7 @@ export default function ListingDetails() {
   const createLeadMutation = useCreateLead();
   const [open, setOpen] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+  const [showVideo, setShowVideo] = useState(false);
   const { toast } = useToast();
   
   const form = useForm({
@@ -48,6 +49,22 @@ export default function ListingDetails() {
       buyerPhone: "",
     }
   });
+
+  const videoUrl = listing?.video || "";
+  const hasVideo = videoUrl.length > 0;
+
+  const videoEmbedUrl = useMemo(() => {
+    if (!videoUrl) return "";
+    const ytMatch = videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`;
+    return videoUrl;
+  }, [videoUrl]);
+
+  const isYouTube = /youtube\.com|youtu\.be/.test(videoUrl);
+  const youtubeThumb = useMemo(() => {
+    const ytMatch = videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return ytMatch ? `https://img.youtube.com/vi/${ytMatch[1]}/mqdefault.jpg` : "";
+  }, [videoUrl]);
 
   const onSubmitLead = (data: any) => {
     createLeadMutation.mutate({ ...data, listingId }, {
@@ -94,30 +111,83 @@ export default function ListingDetails() {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div className="space-y-4">
-            <div className="aspect-[4/3] rounded-2xl overflow-hidden border shadow-sm bg-muted">
-              <img
-                src={mainPhoto}
-                alt={listing.title}
-                className="w-full h-full object-cover transition-all duration-300"
-                data-testid="img-main-photo"
-              />
+            <div className="aspect-[4/3] rounded-2xl overflow-hidden border shadow-sm bg-muted relative">
+              {showVideo ? (
+                <>
+                  {isYouTube ? (
+                    <iframe
+                      src={videoEmbedUrl}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      data-testid="video-player"
+                    />
+                  ) : (
+                    <video
+                      src={videoUrl}
+                      className="w-full h-full object-contain bg-black"
+                      controls
+                      autoPlay
+                      data-testid="video-player"
+                    />
+                  )}
+                  <button
+                    onClick={() => setShowVideo(false)}
+                    className="absolute top-3 right-3 bg-black/70 text-white rounded-full p-2 hover:bg-black/90 transition-colors z-10"
+                    data-testid="button-close-video"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </>
+              ) : (
+                <img
+                  src={mainPhoto}
+                  alt={listing.title}
+                  className="w-full h-full object-cover transition-all duration-300"
+                  data-testid="img-main-photo"
+                />
+              )}
             </div>
-            {photos.length > 1 && (
+            {(photos.length > 1 || hasVideo) && (
               <div className="grid grid-cols-4 gap-4">
                 {photos.map((photo, i) => (
                   <div
                     key={i}
                     className={`aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all duration-200 hover:opacity-90 ${
-                      i === selectedPhotoIndex
+                      !showVideo && i === selectedPhotoIndex
                         ? "border-primary ring-2 ring-primary/30"
                         : "border-transparent hover:border-primary/50"
                     }`}
-                    onClick={() => setSelectedPhotoIndex(i)}
+                    onClick={() => { setSelectedPhotoIndex(i); setShowVideo(false); }}
                     data-testid={`thumbnail-photo-${i}`}
                   >
                     <img src={photo} alt={`${listing.title} photo ${i + 1}`} className="w-full h-full object-cover" />
                   </div>
                 ))}
+                {hasVideo && (
+                  <div
+                    className={`aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all duration-200 hover:opacity-90 relative ${
+                      showVideo
+                        ? "border-primary ring-2 ring-primary/30"
+                        : "border-transparent hover:border-primary/50"
+                    }`}
+                    onClick={() => setShowVideo(true)}
+                    data-testid="thumbnail-video"
+                  >
+                    {youtubeThumb ? (
+                      <img src={youtubeThumb} alt="Video thumbnail" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                        <Play className="h-8 w-8 text-white" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <div className="bg-white/90 rounded-full p-2">
+                        <Play className="h-6 w-6 text-slate-900 fill-slate-900" />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
