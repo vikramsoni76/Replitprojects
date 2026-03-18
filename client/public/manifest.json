@@ -1,0 +1,43 @@
+{
+  "name": "EmbMarket - Used Embroidery Machines",
+  "short_name": "EmbMarket",
+  "description": "India's trusted marketplace for used embroidery machines. Buy and sell Tajima, Barudan, SWF, and other industrial embroidery equipment.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["shopping", "business"],
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Machines",
+      "short_name": "Browse",
+      "description": "Browse available embroidery machines",
+      "url": "/browse",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Sell Your Machine",
+      "short_name": "Sell",
+      "description": "List your embroidery machine for sale",
+      "url": "/sell",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    }
+  ]
+}

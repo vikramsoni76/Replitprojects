@@ -383,5 +383,47 @@ export async function registerRoutes(
     });
   }
 
+  app.get("/sitemap.xml", async (_req, res) => {
+    try {
+      const listings = await storage.getListings("approved");
+      const baseUrl = "https://embmarket.replit.app";
+      const staticPages = [
+        { url: "/", priority: "1.0", changefreq: "daily" },
+        { url: "/browse", priority: "0.9", changefreq: "daily" },
+        { url: "/sell", priority: "0.7", changefreq: "monthly" },
+        { url: "/contact", priority: "0.5", changefreq: "monthly" },
+      ];
+      const today = new Date().toISOString().split("T")[0];
+      const urls = [
+        ...staticPages.map(
+          (p) => `
+    <url>
+      <loc>${baseUrl}${p.url}</loc>
+      <lastmod>${today}</lastmod>
+      <changefreq>${p.changefreq}</changefreq>
+      <priority>${p.priority}</priority>
+    </url>`
+        ),
+        ...listings.map(
+          (l) => `
+    <url>
+      <loc>${baseUrl}/listing/${l.id}</loc>
+      <lastmod>${today}</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>0.8</priority>
+    </url>`
+        ),
+      ].join("");
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}
+</urlset>`;
+      res.setHeader("Content-Type", "application/xml");
+      res.send(xml);
+    } catch {
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+
   return httpServer;
 }
