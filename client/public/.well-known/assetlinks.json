@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "in.embroiderymarket.app",
+    "sha256_cert_fingerprints": [
+      "C9:0B:04:3A:91:BA:49:62:27:B9:85:B4:5E:A8:E3:71:B5:E9:CA:4D:87:1A:D8:92:CB:37:3A:1D:92:5E:8D:B6"
+    ]
+  }
+}]
