@@ -25,7 +25,7 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.5, delay },
 });
 
-const BRANDS = ["Tajima", "Barudan", "SWF", "Brother", "ZSK", "Happy", "Sunstar", "Feiya"];
+const BRANDS = ["Tajima", "Barudan", "SWF", "Brother", "ZSK", "Happy", "High Quality Chinese Machines"];
 
 const STATS = [
   { value: "500+", label: "Machines Listed" },
