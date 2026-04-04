@@ -4,4 +4,4 @@ Disallow: /admin
 Disallow: /dashboard
 Disallow: /api/
 
-Sitemap: https://embmarket.replit.app/sitemap.xml
+Sitemap: https://embroiderymarket.in/sitemap.xml

@@ -108,11 +108,11 @@ export default function Home() {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "EmbMarket",
-    url: "https://embmarket.replit.app",
+    url: "https://embroiderymarket.in",
     description: "India's trusted marketplace for used embroidery machines",
     potentialAction: {
       "@type": "SearchAction",
-      target: "https://embmarket.replit.app/browse?q={search_term_string}",
+      target: "https://embroiderymarket.in/browse?q={search_term_string}",
       "query-input": "required name=search_term_string",
     },
   };

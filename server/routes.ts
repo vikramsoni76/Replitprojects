@@ -386,7 +386,7 @@ export async function registerRoutes(
   app.get("/sitemap.xml", async (_req, res) => {
     try {
       const listings = await storage.getListings("approved");
-      const baseUrl = "https://embmarket.replit.app";
+      const baseUrl = "https://embroiderymarket.in";
       const staticPages = [
         { url: "/", priority: "1.0", changefreq: "daily" },
         { url: "/browse", priority: "0.9", changefreq: "daily" },
