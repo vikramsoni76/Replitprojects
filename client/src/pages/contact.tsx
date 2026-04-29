@@ -205,7 +205,11 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <p className="font-medium text-sm">Email</p>
-                      <a href="mailto:admin@embroiderymarket.in" className="text-sm text-muted-foreground hover:text-primary transition-colors" data-testid="link-contact-email">
+                      <a href="mailto:embroiderymarket2026@gmail.com" className="text-sm text-muted-foreground hover:text-primary transition-colors" data-testid="link-contact-email-gmail">
+                        embroiderymarket2026@gmail.com
+                      </a>
+                      <br />
+                      <a href="mailto:admin@embroiderymarket.in" className="text-sm text-muted-foreground hover:text-primary transition-colors" data-testid="link-contact-email-admin">
                         admin@embroiderymarket.in
                       </a>
                     </div>
