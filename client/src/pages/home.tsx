@@ -31,7 +31,7 @@ const STATS = [
   { value: "500+", label: "Machines Listed" },
   { value: "1,200+", label: "Happy Buyers" },
   { value: "15+", label: "States Covered" },
-  { value: "₹0", label: "Commission Charged" },
+  { value: "Direct", label: "Seller to Buyer Deals" },
 ];
 
 const BUYER_STEPS = [
@@ -84,8 +84,8 @@ const WHY_FEATURES = [
   },
   {
     icon: CheckCircle2,
-    title: "Zero Commission",
-    desc: "We charge nothing on the sale. What you negotiate is what you keep.",
+    title: "Transparent Pricing",
+    desc: "Sellers set their own price. Buyers deal directly — no hidden fees or surprises.",
   },
   {
     icon: Zap,
@@ -157,8 +157,8 @@ export default function Home() {
               {...fadeUp(0.2)}
               className="mt-6 text-lg leading-8 text-slate-300 max-w-xl"
             >
-              Connect directly with verified sellers across India. No commission,
-              no middleman — just transparent deals on industrial embroidery equipment.
+              Connect directly with verified sellers and dealers across India.
+              Transparent listings, real specs, and direct conversations.
             </motion.p>
 
             <motion.div
@@ -419,7 +419,7 @@ export default function Home() {
               Looking to Sell?
             </span>
             <h2 className="text-2xl sm:text-3xl font-display font-bold text-white leading-snug max-w-sm">
-              Reach thousands of serious buyers with zero commission.
+              Reach thousands of serious buyers. List your price and connect directly.
             </h2>
             <p className="text-slate-400 mt-3 text-sm max-w-xs leading-relaxed">
               List your machine in minutes. Get verified, go live, and start receiving inquiries.
