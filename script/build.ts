@@ -1,6 +1,30 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile } from "fs/promises";
+import pg from "pg";
+
+const { Pool } = pg;
+
+async function wakeDatabase() {
+  if (!process.env.DATABASE_URL) return;
+  console.log("waking database...");
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 15000 });
+  let attempts = 0;
+  while (attempts < 5) {
+    try {
+      await pool.query("SELECT 1");
+      await pool.end();
+      console.log("database is ready.");
+      return;
+    } catch (err: any) {
+      attempts++;
+      console.warn(`database not ready yet (attempt ${attempts}/5): ${err.message}`);
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+  }
+  await pool.end().catch(() => {});
+  console.warn("database did not respond in time — continuing build anyway.");
+}
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -33,6 +57,8 @@ const allowlist = [
 ];
 
 async function buildAll() {
+  await wakeDatabase();
+
   await rm("dist", { recursive: true, force: true });
 
   console.log("building client...");
